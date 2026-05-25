@@ -1,421 +1,926 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<title>Flight Delay Visual Dashboard v5</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="https://unpkg.com/topojson@3.0.2/dist/topojson.min.js"></script>
-<style>
-:root{
-  --bg:#060810;--bg2:#0d1117;--bg3:#111827;
-  --border:#1e2535;--text:#c9d1d9;--dim:#6e7681;
-  --clear:#00e676;--low:#aeea00;--mod:#ffab00;--high:#ff5722;--severe:#ff1744;
-  --accent:#38bdf8;--mono:'Space Mono',monospace;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+  <meta charset="utf-8">
+  <title>Flight Delay Visual Dashboard v5</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap"
+    rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson@3.0.2/dist/topojson.min.js"></script>
+  <style>
+    :root {
+      --bg: #060810;
+      --bg2: #0d1117;
+      --bg3: #111827;
+      --border: #1e2535;
+      --text: #c9d1d9;
+      --dim: #6e7681;
+      --clear: #00e676;
+      --low: #aeea00;
+      --mod: #ffab00;
+      --high: #ff5722;
+      --severe: #ff1744;
+      --accent: #38bdf8;
+      --mono: 'Space Mono', monospace;
+    }
 
-/* topbar */
-#topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 24px;border-bottom:1px solid var(--border);
-  background:linear-gradient(90deg,#060810 0%,#0d1420 100%);
-  position:sticky;top:0;z-index:50;gap:16px;
-}
-#brand{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
-  background:linear-gradient(90deg,var(--accent),#818cf8);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
-#simtime{font-size:11px;color:var(--dim);letter-spacing:.05em;margin-top:2px}
-#left-head{display:flex;flex-direction:column;gap:2px}
-#controls{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-top:-6px}
-.btn{background:transparent;border:1px solid var(--border);color:var(--text);
-  padding:6px 14px;border-radius:20px;cursor:pointer;font-family:var(--mono);font-size:12px;transition:all .2s}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.active{background:var(--accent);color:#000;border-color:var(--accent)}
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
 
-/* mode toggle */
-#mode-toggle{display:flex;border:1px solid var(--border);border-radius:20px;overflow:hidden;flex-shrink:0}
-.mode-btn{padding:6px 16px;cursor:pointer;font-family:var(--mono);font-size:11px;
-  border:none;background:transparent;color:var(--dim);transition:all .2s;letter-spacing:.04em}
-.mode-btn.active{background:var(--accent);color:#000;font-weight:700}
-.mode-btn:first-child{border-right:1px solid var(--border)}
-#mode-unavail{font-size:10px;color:var(--mod);letter-spacing:.05em;
-  padding:3px 10px;border:1px solid var(--mod);border-radius:10px;display:none}
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      overflow-x: hidden
+    }
 
-#slider-wrap{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}
-#tslider{width:160px;accent-color:var(--accent);cursor:pointer}
+    /* topbar */
+    #topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, #060810 0%, #0d1420 100%);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      gap: 16px;
+    }
 
-/* thermometer */
-#thermo-bar{display:flex;align-items:center;gap:12px;
-  padding:10px 24px;border-bottom:1px solid var(--border);background:var(--bg2);font-size:11px}
-#thermo-label{color:var(--dim);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;min-width:160px}
-#thermo-track{flex:1;height:6px;background:#1e2535;border-radius:3px;overflow:hidden}
-#thermo-fill{height:100%;border-radius:3px;transition:width .6s ease,background .6s ease}
-#thermo-pct{width:48px;text-align:right;font-weight:700}
-.level-dots{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.ldot{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)}
-.ldot span{width:8px;height:8px;border-radius:50%;display:inline-block}
+    #brand {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--accent), #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap
+    }
 
-/* main */
-#main{display:grid;grid-template-columns:1fr 460px;gap:0;height:calc(100vh - 98px)}
+    #simtime {
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: .05em;
+      margin-top: 2px
+    }
 
-/* map */
-#map-wrap{position:relative;overflow:hidden;background:var(--bg)}
-.ap-tip{
-  position:absolute;display:none;pointer-events:none;z-index:100;
-  background:rgba(6,8,16,.97);border:1px solid var(--border);
-  border-radius:8px;padding:12px 14px;min-width:200px;
-  box-shadow:0 8px 32px rgba(0,0,0,.7);
-}
-.tip-code{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1}
-.tip-name{font-size:10px;color:var(--dim);margin:2px 0 8px}
-.tip-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin:3px 0}
-.tip-bar-wrap{height:4px;background:#1e2535;border-radius:2px;margin-top:2px;margin-bottom:3px;overflow:hidden}
-.tip-bar{height:100%;border-radius:2px}
-.tip-div{height:1px;background:var(--border);margin:6px 0}
+    #left-head {
+      display: flex;
+      flex-direction: column;
+      gap: 2px
+    }
 
-/* side panel */
-#side{background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
-#side-header{
-  padding:10px 14px;border-bottom:1px solid var(--border);
-  font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;
-  display:flex;justify-content:space-between;align-items:center;
-  position:sticky;top:0;background:var(--bg2);z-index:10;flex-shrink:0;
-}
+    #controls {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      margin-top: -6px
+    }
 
-/* ── PRED-ONLY cards (unchanged from v3) ── */
-.ap-card{padding:12px 16px;border-bottom:1px solid var(--border);
-  cursor:pointer;transition:background .15s;position:relative;overflow:hidden}
-.ap-card:hover{background:var(--bg3)}
-.ap-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.ap-code{font-family:'Syne',sans-serif;font-size:16px;font-weight:800}
-.ap-name{font-size:9px;color:var(--dim);margin-top:1px}
-.ap-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.06em}
-.delay-bars{display:flex;flex-direction:column;gap:5px}
-.dbar-row{display:flex;align-items:center;gap:8px;font-size:10px}
-.dbar-label{width:26px;color:var(--dim);flex-shrink:0}
-.dbar-track{flex:1;height:5px;background:#1a2030;border-radius:3px;overflow:hidden}
-.dbar-fill{height:100%;border-radius:3px;transition:width .5s ease}
-.dbar-val{width:42px;text-align:right;font-size:10px;font-weight:700}
-.prob-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:10px}
-.prob-label{width:26px;color:var(--dim);flex-shrink:0}
-.prob-track{flex:1;height:3px;background:#1a2030;border-radius:2px;overflow:hidden}
-.prob-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#334,var(--accent));transition:width .5s}
-.prob-val{width:42px;text-align:right;color:var(--dim);font-size:10px}
-.rank-num{position:absolute;top:12px;right:16px;font-family:'Syne',sans-serif;
-  font-size:28px;font-weight:800;color:rgba(255,255,255,.04);line-height:1}
+    .btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 12px;
+      transition: all .2s
+    }
 
-.err-stack{display:flex;flex-direction:column;gap:2px;line-height:1.05}
-.err-line{display:flex;align-items:center;justify-content:flex-start;gap:4px;white-space:nowrap;font-size:10px;font-weight:700}
-.err-tag{width:28px;font-size:8px;color:var(--dim);letter-spacing:.04em;flex-shrink:0}
-.err-signed{font-variant-numeric:tabular-nums}
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
 
-/* ── CMP TABLE ── */
-#cmp-table-wrap{flex:1;overflow-y:auto}
-#cmp-table-wrap::-webkit-scrollbar{width:4px}
-#cmp-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    .btn.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent)
+    }
 
-.cmp-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
-.cmp-table thead th{
-  padding:7px 8px;text-align:left;font-size:9px;font-weight:700;
-  color:var(--dim);letter-spacing:.1em;text-transform:uppercase;
-  border-bottom:1px solid var(--border);position:sticky;top:0;
-  background:var(--bg2);white-space:nowrap;
-}
-/* column widths */
-.cmp-table colgroup col:nth-child(1){width:68px}   /* airport */
-.cmp-table colgroup col:nth-child(2){width:22px}   /* PRED/ACT label */
-.cmp-table colgroup col:nth-child(3){width:25%}    /* arr delay */
-.cmp-table colgroup col:nth-child(4){width:25%}    /* dep delay */
-.cmp-table colgroup col:nth-child(5){width:76px}   /* error */
-.cmp-table colgroup col:nth-child(6){width:56px}   /* class */
+    /* mode toggle */
+    #mode-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      flex-shrink: 0
+    }
 
-/* airport group: first row gets top border */
-.ap-group-start td{border-top:1px solid var(--border);padding-top:7px}
-.ap-group-end   td{padding-bottom:7px}
-.cmp-table td{padding:2px 8px;vertical-align:middle}
+    .mode-btn {
+      padding: 6px 16px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 11px;
+      border: none;
+      background: transparent;
+      color: var(--dim);
+      transition: all .2s;
+      letter-spacing: .04em
+    }
 
-/* airport code cell spans 2 rows */
-.td-airport{vertical-align:middle;font-family:'Syne',sans-serif;font-size:14px;font-weight:800}
-.td-row-label{font-size:9px;letter-spacing:.06em;font-weight:700;white-space:nowrap;padding-left:4px}
+    .mode-btn.active {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700
+    }
 
-/* bar cell: bar + value inline */
-.bar-cell{display:flex;align-items:center;gap:5px;white-space:nowrap}
-.inline-bar{height:7px;border-radius:3px;min-width:2px;max-width:90px;flex-shrink:0}
-.bar-val{font-size:10px;font-weight:700}
+    .mode-btn:first-child {
+      border-right: 1px solid var(--border)
+    }
 
-/* error cell */
-.err-val{font-size:10px;font-weight:700;white-space:nowrap}
+    #mode-unavail {
+      font-size: 10px;
+      color: var(--mod);
+      letter-spacing: .05em;
+      padding: 3px 10px;
+      border: 1px solid var(--mod);
+      border-radius: 10px;
+      display: none
+    }
 
-/* class cell */
-.cls-val{font-size:9px;font-weight:700;letter-spacing:.04em}
-.cls-miss{font-size:8px;color:#ef4444}
+    #slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--dim)
+    }
 
-@keyframes pulse-ring{
-  0%{r:var(--pr);opacity:.8} 70%{r:calc(var(--pr)*2.2);opacity:0} 100%{r:calc(var(--pr)*2.2);opacity:0}
-}
-.pulse-circle{animation:pulse-ring 1.8s cubic-bezier(0.215,0.61,0.355,1) infinite}
+    #tslider {
+      width: 160px;
+      accent-color: var(--accent);
+      cursor: pointer
+    }
 
-#side::-webkit-scrollbar{width:4px}
-#side::-webkit-scrollbar-track{background:var(--bg2)}
-#side::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-</style>
+    /* thermometer */
+    #thermo-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      font-size: 11px
+    }
+
+    #thermo-label {
+      color: var(--dim);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      min-width: 160px
+    }
+
+    #thermo-track {
+      flex: 1;
+      height: 6px;
+      background: #1e2535;
+      border-radius: 3px;
+      overflow: hidden
+    }
+
+    #thermo-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width .6s ease, background .6s ease
+    }
+
+    #thermo-pct {
+      width: 48px;
+      text-align: right;
+      font-weight: 700
+    }
+
+    .level-dots {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .ldot {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      color: var(--dim)
+    }
+
+    .ldot span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block
+    }
+
+    /* main */
+    #main {
+      display: grid;
+      grid-template-columns: 1fr 460px;
+      gap: 0;
+      height: calc(100vh - 98px)
+    }
+
+    /* map */
+    #map-wrap {
+      position: relative;
+      overflow: hidden;
+      background: var(--bg)
+    }
+
+    .ap-tip {
+      position: absolute;
+      display: none;
+      pointer-events: none;
+      z-index: 100;
+      background: rgba(6, 8, 16, .97);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      min-width: 200px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .7);
+    }
+
+    .tip-code {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1
+    }
+
+    .tip-name {
+      font-size: 10px;
+      color: var(--dim);
+      margin: 2px 0 8px
+    }
+
+    .tip-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      margin: 3px 0
+    }
+
+    .tip-bar-wrap {
+      height: 4px;
+      background: #1e2535;
+      border-radius: 2px;
+      margin-top: 2px;
+      margin-bottom: 3px;
+      overflow: hidden
+    }
+
+    .tip-bar {
+      height: 100%;
+      border-radius: 2px
+    }
+
+    .tip-div {
+      height: 1px;
+      background: var(--border);
+      margin: 6px 0
+    }
+
+    /* side panel */
+    #side {
+      background: var(--bg2);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column
+    }
+
+    #side-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--dim);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: var(--bg2);
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    /* ── PRED-ONLY cards (unchanged from v3) ── */
+    .ap-card {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .15s;
+      position: relative;
+      overflow: hidden
+    }
+
+    .ap-card:hover {
+      background: var(--bg3)
+    }
+
+    .ap-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px
+    }
+
+    .ap-code {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 800
+    }
+
+    .ap-name {
+      font-size: 9px;
+      color: var(--dim);
+      margin-top: 1px
+    }
+
+    .ap-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      letter-spacing: .06em
+    }
+
+    .delay-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 5px
+    }
+
+    .dbar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px
+    }
+
+    .dbar-label {
+      width: 26px;
+      color: var(--dim);
+      flex-shrink: 0
+    }
+
+    .dbar-track {
+      flex: 1;
+      height: 5px;
+      background: #1a2030;
+      border-radius: 3px;
+      overflow: hidden
+    }
+
+    .dbar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width .5s ease
+    }
+
+    .dbar-val {
+      width: 42px;
+      text-align: right;
+      font-size: 10px;
+      font-weight: 700
+    }
+
+    .prob-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      font-size: 10px
+    }
+
+    .prob-label {
+      width: 26px;
+      color: var(--dim);
+      flex-shrink: 0
+    }
+
+    .prob-track {
+      flex: 1;
+      height: 3px;
+      background: #1a2030;
+      border-radius: 2px;
+      overflow: hidden
+    }
+
+    .prob-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #334, var(--accent));
+      transition: width .5s
+    }
+
+    .prob-val {
+      width: 42px;
+      text-align: right;
+      color: var(--dim);
+      font-size: 10px
+    }
+
+    .rank-num {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: rgba(255, 255, 255, .04);
+      line-height: 1
+    }
+
+    .err-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      line-height: 1.05
+    }
+
+    .err-line {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 4px;
+      white-space: nowrap;
+      font-size: 10px;
+      font-weight: 700
+    }
+
+    .err-tag {
+      width: 28px;
+      font-size: 8px;
+      color: var(--dim);
+      letter-spacing: .04em;
+      flex-shrink: 0
+    }
+
+    .err-signed {
+      font-variant-numeric: tabular-nums
+    }
+
+    /* ── CMP TABLE ── */
+    #cmp-table-wrap {
+      flex: 1;
+      overflow-y: auto
+    }
+
+    #cmp-table-wrap::-webkit-scrollbar {
+      width: 4px
+    }
+
+    #cmp-table-wrap::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px
+    }
+
+    .cmp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      table-layout: fixed
+    }
+
+    .cmp-table thead th {
+      padding: 7px 8px;
+      text-align: left;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--dim);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg2);
+      white-space: nowrap;
+    }
+
+    /* column widths */
+    .cmp-table colgroup col:nth-child(1) {
+      width: 68px
+    }
+
+    /* airport */
+    .cmp-table colgroup col:nth-child(2) {
+      width: 22px
+    }
+
+    /* PRED/ACT label */
+    .cmp-table colgroup col:nth-child(3) {
+      width: 25%
+    }
+
+    /* arr delay */
+    .cmp-table colgroup col:nth-child(4) {
+      width: 25%
+    }
+
+    /* dep delay */
+    .cmp-table colgroup col:nth-child(5) {
+      width: 76px
+    }
+
+    /* error */
+    .cmp-table colgroup col:nth-child(6) {
+      width: 56px
+    }
+
+    /* class */
+
+    /* airport group: first row gets top border */
+    .ap-group-start td {
+      border-top: 1px solid var(--border);
+      padding-top: 7px
+    }
+
+    .ap-group-end td {
+      padding-bottom: 7px
+    }
+
+    .cmp-table td {
+      padding: 2px 8px;
+      vertical-align: middle
+    }
+
+    /* airport code cell spans 2 rows */
+    .td-airport {
+      vertical-align: middle;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 800
+    }
+
+    .td-row-label {
+      font-size: 9px;
+      letter-spacing: .06em;
+      font-weight: 700;
+      white-space: nowrap;
+      padding-left: 4px
+    }
+
+    /* bar cell: bar + value inline */
+    .bar-cell {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap
+    }
+
+    .inline-bar {
+      height: 7px;
+      border-radius: 3px;
+      min-width: 2px;
+      max-width: 90px;
+      flex-shrink: 0
+    }
+
+    .bar-val {
+      font-size: 10px;
+      font-weight: 700
+    }
+
+    /* error cell */
+    .err-val {
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap
+    }
+
+    /* class cell */
+    .cls-val {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .04em
+    }
+
+    .cls-miss {
+      font-size: 8px;
+      color: #ef4444
+    }
+
+    @keyframes pulse-ring {
+      0% {
+        r: var(--pr);
+        opacity: .8
+      }
+
+      70% {
+        r: calc(var(--pr)*2.2);
+        opacity: 0
+      }
+
+      100% {
+        r: calc(var(--pr)*2.2);
+        opacity: 0
+      }
+    }
+
+    .pulse-circle {
+      animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite
+    }
+
+    #side::-webkit-scrollbar {
+      width: 4px
+    }
+
+    #side::-webkit-scrollbar-track {
+      background: var(--bg2)
+    }
+
+    #side::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px
+    }
+  </style>
 </head>
+
 <body>
 
-<div id="topbar">
-  <div id="left-head">
-    <div id="brand">DP-MSDPN · Flight Delay Forecast</div>
-    <div id="simtime">Loading…</div>
-  </div>
-  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-    <div id="mode-toggle">
-      <button class="mode-btn active" id="btn-pred" onclick="setMode('pred')">PRED ONLY</button>
-      <button class="mode-btn"        id="btn-cmp"  onclick="setMode('cmp')">PRED vs ACTUAL</button>
+  <div id="topbar">
+    <div id="left-head">
+      <div id="brand">DP-MSFDPN · Flight Delay Forecast</div>
+      <div id="simtime">Loading…</div>
     </div>
-    <div id="mode-unavail">actuals not in npz</div>
-  </div>
-  <div id="controls">
-    <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;font-size:10px;color:var(--dim);text-transform:uppercase">
-      <span>Base Anchor:</span>
-      <button class="btn" onclick="stepAnchor(-1)">◀</button>
-      <input type="range" id="anchorSlider" style="width:160px;accent-color:#818cf8;cursor:pointer" min="0" value="0">
-      <button class="btn" onclick="stepAnchor(1)">▶</button>
-      <span id="anchor-val" style="font-size:11px;width:30px;text-align:right">0</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:10px;color:var(--dim);text-transform:uppercase">Forecast (+H):</span>
-      <div id="slider-wrap">
-        <span id="t-idx">+0</span>
-        <input type="range" id="tslider" min="0" value="0" step="1">
-        <span id="t-total">+23</span>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <div id="mode-toggle">
+        <button class="mode-btn active" id="btn-pred" onclick="setMode('pred')">PRED ONLY</button>
+        <button class="mode-btn" id="btn-cmp" onclick="setMode('cmp')">PRED vs ACTUAL</button>
       </div>
-      <select id="speedSel" class="btn" style="padding-right:4px" onchange="changeSpeed(this.value)">
-        <option value="1800">0.5x</option>
-        <option value="900" selected>1x</option>
-        <option value="450">2x</option>
-        <option value="200">5x</option>
-        <option value="50">MAX</option>
-      </select>
-      <button class="btn" onclick="step(-1)">◀</button>
-      <button class="btn" onclick="step(1)">▶</button>
-      <button class="btn" id="playBtn" onclick="togglePlay(false)">⏵ Play</button>
-      <button class="btn" id="playContBtn" onclick="togglePlay(true)">⏵ Play Cont.</button>
+      <div id="mode-unavail">actuals not in npz</div>
+    </div>
+    <div id="controls">
+      <div
+        style="display:flex;align-items:center;gap:8px;justify-content:flex-end;font-size:10px;color:var(--dim);text-transform:uppercase">
+        <span>Base Anchor:</span>
+        <button class="btn" onclick="stepAnchor(-1)">◀</button>
+        <input type="range" id="anchorSlider" style="width:160px;accent-color:#818cf8;cursor:pointer" min="0" value="0">
+        <button class="btn" onclick="stepAnchor(1)">▶</button>
+        <span id="anchor-val" style="font-size:11px;width:30px;text-align:right">0</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:10px;color:var(--dim);text-transform:uppercase">Forecast (+H):</span>
+        <div id="slider-wrap">
+          <span id="t-idx">+0</span>
+          <input type="range" id="tslider" min="0" value="0" step="1">
+          <span id="t-total">+23</span>
+        </div>
+        <select id="speedSel" class="btn" style="padding-right:4px" onchange="changeSpeed(this.value)">
+          <option value="1800">0.5x</option>
+          <option value="900" selected>1x</option>
+          <option value="450">2x</option>
+          <option value="200">5x</option>
+          <option value="50">MAX</option>
+        </select>
+        <button class="btn" onclick="step(-1)">◀</button>
+        <button class="btn" onclick="step(1)">▶</button>
+        <button class="btn" id="playBtn" onclick="togglePlay(false)">⏵ Play</button>
+        <button class="btn" id="playContBtn" onclick="togglePlay(true)">⏵ Play Cont.</button>
+      </div>
     </div>
   </div>
-</div>
 
-<div id="thermo-bar">
-  <div id="thermo-label">Network Congestion</div>
-  <div id="thermo-track"><div id="thermo-fill"></div></div>
-  <div id="thermo-pct">—</div>
-  <div class="level-dots">
-    <div class="ldot"><span style="background:var(--clear)"></span>CLEAR</div>
-    <div class="ldot"><span style="background:var(--low)"></span>LOW</div>
-    <div class="ldot"><span style="background:var(--mod)"></span>MOD</div>
-    <div class="ldot"><span style="background:var(--high)"></span>HIGH</div>
-    <div class="ldot"><span style="background:var(--severe)"></span>SEVERE</div>
-  </div>
-</div>
-
-<div id="main">
-  <div id="map-wrap">
-    <div class="ap-tip" id="apTip"></div>
-  </div>
-  <div id="side">
-    <div id="side-header">
-      <span id="side-title">Top Delayed Airports</span>
-      <span id="side-count"></span>
+  <div id="thermo-bar">
+    <div id="thermo-label">Network Congestion</div>
+    <div id="thermo-track">
+      <div id="thermo-fill"></div>
     </div>
-    <!-- pred-only cards -->
-    <div id="cards"></div>
-    <!-- cmp table -->
-    <div id="cmp-table-wrap" style="display:none">
-      <table class="cmp-table">
-        <colgroup>
-          <col/><col/><col/><col/><col/><col/>
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Airport</th>
-            <th></th>
-            <th>Arr delay</th>
-            <th>Dep delay</th>
-            <th>Error (arr)</th>
-            <th>Class</th>
-          </tr>
-        </thead>
-        <tbody id="cmp-tbody"></tbody>
-      </table>
+    <div id="thermo-pct">—</div>
+    <div class="level-dots">
+      <div class="ldot"><span style="background:var(--clear)"></span>CLEAR</div>
+      <div class="ldot"><span style="background:var(--low)"></span>LOW</div>
+      <div class="ldot"><span style="background:var(--mod)"></span>MOD</div>
+      <div class="ldot"><span style="background:var(--high)"></span>HIGH</div>
+      <div class="ldot"><span style="background:var(--severe)"></span>SEVERE</div>
     </div>
   </div>
-</div>
 
-<script>
-const HORIZON = 24;
-let topoData=null, currentData=null, playing=false, playTimer=null;
-let playSpeed=900, anchorT=0, localT=0, dashMode='pred';
-const MAX_DELAY=45;
-const LEVEL_COLOR={CLEAR:'#00e676',LOW:'#aeea00',MOD:'#ffab00',HIGH:'#ff5722',SEVERE:'#ff1744'};
+  <div id="main">
+    <div id="map-wrap">
+      <div class="ap-tip" id="apTip"></div>
+      <div
+        style="position: absolute; bottom: 20px; left: 20px; z-index: 100; display: flex; align-items: center; gap: 12px; background: rgba(6, 8, 16, 0.85); padding: 8px 16px; border: 1px solid var(--border); border-radius: 30px;">
+        <img src="https://upload.wikimedia.org/wikipedia/en/e/e0/Military_Institute_of_Science_and_Technology_logo.png"
+          alt="MIST Logo" style="height: 36px; width: auto;">
+        <span
+          style="font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 0.05em;">&copy;
+          FL Romel</span>
+      </div>
+    </div>
+    <div id="side">
+      <div id="side-header">
+        <span id="side-title">Top Delayed Airports</span>
+        <span id="side-count"></span>
+      </div>
+      <!-- pred-only cards -->
+      <div id="cards"></div>
+      <!-- cmp table -->
+      <div id="cmp-table-wrap" style="display:none">
+        <table class="cmp-table">
+          <colgroup>
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Airport</th>
+              <th></th>
+              <th>Arr delay</th>
+              <th>Dep delay</th>
+              <th>Error (arr)</th>
+              <th>Class</th>
+            </tr>
+          </thead>
+          <tbody id="cmp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-function delayColor(d){return d<5?'#00e676':d<10?'#aeea00':d<15?'#ffab00':d<25?'#ff5722':'#ff1744'}
-function errColor(e){
-  if(e===null||e===undefined) return '#6e7681';
-  return Math.abs(e)<2?'#22c55e':e>0?'#ef4444':'#60a5fa';
-}
+  <script>
+    const HORIZON = 24;
+    let topoData = null, currentData = null, playing = false, playTimer = null;
+    let playSpeed = 900, anchorT = 0, localT = 0, dashMode = 'pred';
+    const MAX_DELAY = 45;
+    const LEVEL_COLOR = { CLEAR: '#00e676', LOW: '#aeea00', MOD: '#ffab00', HIGH: '#ff5722', SEVERE: '#ff1744' };
 
-// boot
-d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json').then(topo=>{
-  topoData=topo;
-});
-document.getElementById('anchorSlider').addEventListener('input',e=>{
-  anchorT=parseInt(e.target.value);
-  document.getElementById('anchor-val').textContent=anchorT;
-  fetchAt(anchorT,localT);
-});
-document.getElementById('tslider').addEventListener('input',e=>{
-  localT=parseInt(e.target.value); fetchAt(anchorT,localT);
-});
-
-// mode switch
-function setMode(m){
-  dashMode=m;
-  document.getElementById('btn-pred').classList.toggle('active',m==='pred');
-  document.getElementById('btn-cmp').classList.toggle('active',m==='cmp');
-  document.getElementById('cards').style.display           = m==='pred'?'block':'none';
-  document.getElementById('cmp-table-wrap').style.display  = m==='cmp' ?'block':'none';
-  document.getElementById('side-title').textContent = m==='cmp'?'Pred vs Actual':'Top Delayed Airports';
-  if(currentData){ updateThermo(currentData.nodes); renderSide(currentData.nodes,currentData.has_actuals); renderMap(currentData.nodes,currentData.has_actuals); }
-}
-
-// fetch static
-let allData = [];
-fetch('data.json').then(r=>r.json()).then(d=>{
-  allData=d;
-  fetchAt(0,0);
-});
-function fetchAt(a,l){
-  if(allData.length === 0) return;
-  let idx = Math.min(a+l, allData.length - 1);
-  let res = JSON.parse(JSON.stringify(allData[idx])); // clone
-  res.meta.anchor_t=a; res.meta.local_t=l; 
-  render(res);
-}
-function stepAnchor(dir){
-  if(!currentData) return;
-  const asl=document.getElementById('anchorSlider');
-  let maxA=parseInt(asl.max);
-  let nA=anchorT+dir;
-  if(nA<0) nA=maxA;
-  if(nA>maxA) nA=0;
-  anchorT=nA;
-  document.getElementById('anchor-val').textContent=anchorT;
-  fetchAt(anchorT,localT);
-}
-function step(dir){
-  if(!currentData) return;
-  const maxL=Math.min(HORIZON-1,currentData.meta.total-1-anchorT);
-  let nl=localT+dir; if(nl<0)nl=0; if(nl>maxL)nl=maxL;
-  localT=nl; fetchAt(anchorT,localT);
-}
-let isContinuous = false;
-function togglePlay(continuous=false){
-  if(playing && isContinuous === continuous) {
-    playing = false;
-  } else {
-    playing = true;
-    isContinuous = continuous;
-  }
-  document.getElementById('playBtn').textContent = (playing && !isContinuous) ? '⏸ Pause' : '⏵ Play';
-  document.getElementById('playBtn').classList.toggle('active', playing && !isContinuous);
-  document.getElementById('playContBtn').textContent = (playing && isContinuous) ? '⏸ Pause Cont.' : '⏵ Play Cont.';
-  document.getElementById('playContBtn').classList.toggle('active', playing && isContinuous);
-  if(playing) autoStep(); else clearTimeout(playTimer);
-}
-function autoStep(){
-  if(!playing) return;
-  const maxL=Math.min(HORIZON-1,currentData.meta.total-1-anchorT);
-  if(localT+1 > maxL){
-    if(isContinuous){
-      const asl=document.getElementById('anchorSlider');
-      let maxA=parseInt(asl.max);
-      if(anchorT+1 <= maxA){
-        anchorT++;
-        localT=0;
-        document.getElementById('anchor-val').textContent=anchorT;
-        asl.value=anchorT;
-      } else {
-        togglePlay(isContinuous);
-        return;
-      }
-    } else {
-      togglePlay(isContinuous);
-      return;
+    function delayColor(d) { return d < 5 ? '#00e676' : d < 10 ? '#aeea00' : d < 15 ? '#ffab00' : d < 25 ? '#ff5722' : '#ff1744' }
+    function errColor(e) {
+      if (e === null || e === undefined) return '#6e7681';
+      return Math.abs(e) < 2 ? '#22c55e' : e > 0 ? '#ef4444' : '#60a5fa';
     }
-  } else {
-    localT++;
-  }
-  fetchAt(anchorT,localT);
-  playTimer=setTimeout(autoStep,playSpeed);
-}
-function changeSpeed(v){playSpeed=parseInt(v);if(playing){clearTimeout(playTimer);playTimer=setTimeout(autoStep,playSpeed);}}
 
-// render
-function render(data){
-  currentData=data;
-  const{nodes,meta,has_actuals}=data;
-  anchorT=meta.anchor_t; localT=meta.local_t;
-  document.getElementById('simtime').textContent=`Forecast → ${meta.sim_time}  ·  Step ${meta.timestamp_idx}`;
-  const sl=document.getElementById('tslider');
-  sl.max=Math.min(HORIZON-1,meta.total-1-anchorT); sl.value=localT;
-  document.getElementById('t-idx').textContent='+'+localT+'h';
-  document.getElementById('t-total').textContent='+'+sl.max+'h';
-  const asl=document.getElementById('anchorSlider');
-  asl.max=Math.max(0,meta.total-HORIZON); asl.value=anchorT;
-  document.getElementById('anchor-val').textContent=anchorT;
-  document.getElementById('mode-unavail').style.display=(dashMode==='cmp'&&!has_actuals)?'block':'none';
-  updateThermo(nodes);
-  renderSide(nodes,has_actuals);
-  renderMap(nodes,has_actuals);
-}
+    // boot
+    d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json').then(topo => {
+      topoData = topo;
+    });
+    document.getElementById('anchorSlider').addEventListener('input', e => {
+      anchorT = parseInt(e.target.value);
+      document.getElementById('anchor-val').textContent = anchorT;
+      fetchAt(anchorT, localT);
+    });
+    document.getElementById('tslider').addEventListener('input', e => {
+      localT = parseInt(e.target.value); fetchAt(anchorT, localT);
+    });
 
-function updateThermo(nodes){
-  let pct,label;
-  if(dashMode==='cmp'){
-    const bad=nodes.filter(n=>n.err_arr!==null&&Math.abs(n.err_arr)>5).length;
-    pct=Math.round(bad/nodes.length*100); label='Model Inaccuracy';
-  } else {
-    const hot=nodes.filter(n=>n.avg_delay>10).length;
-    pct=Math.round(hot/nodes.length*100); label='Network Congestion';
-  }
-  const c=pct<20?'#00e676':pct<40?'#aeea00':pct<60?'#ffab00':pct<80?'#ff5722':'#ff1744';
-  document.getElementById('thermo-label').textContent=label;
-  document.getElementById('thermo-fill').style.cssText=`width:${pct}%;background:${c}`;
-  document.getElementById('thermo-pct').style.color=c;
-  document.getElementById('thermo-pct').textContent=pct+'%';
-}
+    // mode switch
+    function setMode(m) {
+      dashMode = m;
+      document.getElementById('btn-pred').classList.toggle('active', m === 'pred');
+      document.getElementById('btn-cmp').classList.toggle('active', m === 'cmp');
+      document.getElementById('cards').style.display = m === 'pred' ? 'block' : 'none';
+      document.getElementById('cmp-table-wrap').style.display = m === 'cmp' ? 'block' : 'none';
+      document.getElementById('side-title').textContent = m === 'cmp' ? 'Pred vs Actual' : 'Top Delayed Airports';
+      if (currentData) { updateThermo(currentData.nodes); renderSide(currentData.nodes, currentData.has_actuals); renderMap(currentData.nodes, currentData.has_actuals); }
+    }
 
-function renderSide(nodes,has_actuals){
-  document.getElementById('side-count').textContent=nodes.length+' airports';
-  if(dashMode==='pred'){ renderCards(nodes); return; }
-  renderCmpTable(nodes,has_actuals);
-}
+    // fetch static
+    let allData = [];
+    fetch('data.json').then(r => r.json()).then(d => {
+      allData = d;
+      fetchAt(0, 0);
+    });
+    function fetchAt(a, l) {
+      if (allData.length === 0) return;
+      let idx = Math.min(a + l, allData.length - 1);
+      let res = JSON.parse(JSON.stringify(allData[idx])); // clone
+      res.meta.anchor_t = a; res.meta.local_t = l;
+      render(res);
+    }
+    function stepAnchor(dir) {
+      if (!currentData) return;
+      const asl = document.getElementById('anchorSlider');
+      let maxA = parseInt(asl.max);
+      let nA = anchorT + dir;
+      if (nA < 0) nA = maxA;
+      if (nA > maxA) nA = 0;
+      anchorT = nA;
+      document.getElementById('anchor-val').textContent = anchorT;
+      fetchAt(anchorT, localT);
+    }
+    function step(dir) {
+      if (!currentData) return;
+      const maxL = Math.min(HORIZON - 1, currentData.meta.total - 1 - anchorT);
+      let nl = localT + dir; if (nl < 0) nl = 0; if (nl > maxL) nl = maxL;
+      localT = nl; fetchAt(anchorT, localT);
+    }
+    let isContinuous = false;
+    function togglePlay(continuous = false) {
+      if (playing && isContinuous === continuous) {
+        playing = false;
+      } else {
+        playing = true;
+        isContinuous = continuous;
+      }
+      document.getElementById('playBtn').textContent = (playing && !isContinuous) ? '⏸ Pause' : '⏵ Play';
+      document.getElementById('playBtn').classList.toggle('active', playing && !isContinuous);
+      document.getElementById('playContBtn').textContent = (playing && isContinuous) ? '⏸ Pause Cont.' : '⏵ Play Cont.';
+      document.getElementById('playContBtn').classList.toggle('active', playing && isContinuous);
+      if (playing) autoStep(); else clearTimeout(playTimer);
+    }
+    function autoStep() {
+      if (!playing) return;
+      const maxL = Math.min(HORIZON - 1, currentData.meta.total - 1 - anchorT);
+      if (localT + 1 > maxL) {
+        if (isContinuous) {
+          const asl = document.getElementById('anchorSlider');
+          let maxA = parseInt(asl.max);
+          if (anchorT + 1 <= maxA) {
+            anchorT++;
+            localT = 0;
+            document.getElementById('anchor-val').textContent = anchorT;
+            asl.value = anchorT;
+          } else {
+            togglePlay(isContinuous);
+            return;
+          }
+        } else {
+          togglePlay(isContinuous);
+          return;
+        }
+      } else {
+        localT++;
+      }
+      fetchAt(anchorT, localT);
+      playTimer = setTimeout(autoStep, playSpeed);
+    }
+    function changeSpeed(v) { playSpeed = parseInt(v); if (playing) { clearTimeout(playTimer); playTimer = setTimeout(autoStep, playSpeed); } }
 
-// ── PRED-ONLY cards (v3 original) ──────────────────────────────────────────
-function barColor(d){return delayColor(d)}
-function levelBadge(lvl){
-  const c=LEVEL_COLOR[lvl]||'#888';
-  return `<span class="ap-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${lvl}</span>`;
-}
-function renderCards(nodes){
-  document.getElementById('cards').innerHTML=nodes.map((n,i)=>{
-    const aP=Math.min(100,n.arr_delay/MAX_DELAY*100).toFixed(1);
-    const dP=Math.min(100,n.dep_delay/MAX_DELAY*100).toFixed(1);
-    const aC=barColor(n.arr_delay), dC=barColor(n.dep_delay);
-    return `
+    // render
+    function render(data) {
+      currentData = data;
+      const { nodes, meta, has_actuals } = data;
+      anchorT = meta.anchor_t; localT = meta.local_t;
+      document.getElementById('simtime').textContent = `Forecast → ${meta.sim_time}  ·  Step ${meta.timestamp_idx}`;
+      const sl = document.getElementById('tslider');
+      sl.max = Math.min(HORIZON - 1, meta.total - 1 - anchorT); sl.value = localT;
+      document.getElementById('t-idx').textContent = '+' + localT + 'h';
+      document.getElementById('t-total').textContent = '+' + sl.max + 'h';
+      const asl = document.getElementById('anchorSlider');
+      asl.max = Math.max(0, meta.total - HORIZON); asl.value = anchorT;
+      document.getElementById('anchor-val').textContent = anchorT;
+      document.getElementById('mode-unavail').style.display = (dashMode === 'cmp' && !has_actuals) ? 'block' : 'none';
+      updateThermo(nodes);
+      renderSide(nodes, has_actuals);
+      renderMap(nodes, has_actuals);
+    }
+
+    function updateThermo(nodes) {
+      let pct, label;
+      if (dashMode === 'cmp') {
+        const bad = nodes.filter(n => n.err_arr !== null && Math.abs(n.err_arr) > 5).length;
+        pct = Math.round(bad / nodes.length * 100); label = 'Model Inaccuracy';
+      } else {
+        const hot = nodes.filter(n => n.avg_delay > 10).length;
+        pct = Math.round(hot / nodes.length * 100); label = 'Network Congestion';
+      }
+      const c = pct < 20 ? '#00e676' : pct < 40 ? '#aeea00' : pct < 60 ? '#ffab00' : pct < 80 ? '#ff5722' : '#ff1744';
+      document.getElementById('thermo-label').textContent = label;
+      document.getElementById('thermo-fill').style.cssText = `width:${pct}%;background:${c}`;
+      document.getElementById('thermo-pct').style.color = c;
+      document.getElementById('thermo-pct').textContent = pct + '%';
+    }
+
+    function renderSide(nodes, has_actuals) {
+      document.getElementById('side-count').textContent = nodes.length + ' airports';
+      if (dashMode === 'pred') { renderCards(nodes); return; }
+      renderCmpTable(nodes, has_actuals);
+    }
+
+    // ── PRED-ONLY cards (v3 original) ──────────────────────────────────────────
+    function barColor(d) { return delayColor(d) }
+    function levelBadge(lvl) {
+      const c = LEVEL_COLOR[lvl] || '#888';
+      return `<span class="ap-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">${lvl}</span>`;
+    }
+    function renderCards(nodes) {
+      document.getElementById('cards').innerHTML = nodes.map((n, i) => {
+        const aP = Math.min(100, n.arr_delay / MAX_DELAY * 100).toFixed(1);
+        const dP = Math.min(100, n.dep_delay / MAX_DELAY * 100).toFixed(1);
+        const aC = barColor(n.arr_delay), dC = barColor(n.dep_delay);
+        return `
     <div class="ap-card" onclick="highlightAp('${n.code}')">
-      <div class="rank-num">${i+1}</div>
+      <div class="rank-num">${i + 1}</div>
       <div class="ap-card-top">
         <div><div class="ap-code" style="color:${LEVEL_COLOR[n.level]}">${n.code}</div>
              <div class="ap-name">${n.name}</div></div>
@@ -431,49 +936,49 @@ function renderCards(nodes){
       </div>
       <div class="prob-row">
         <div class="prob-label">P(D)</div>
-        <div class="prob-track"><div class="prob-fill" style="width:${(n.p_delay*100).toFixed(1)}%"></div></div>
-        <div class="prob-val">${(n.p_delay*100).toFixed(0)}%</div>
+        <div class="prob-track"><div class="prob-fill" style="width:${(n.p_delay * 100).toFixed(1)}%"></div></div>
+        <div class="prob-val">${(n.p_delay * 100).toFixed(0)}%</div>
       </div>
     </div>`;
-  }).join('');
-}
+      }).join('');
+    }
 
-// ── CMP TABLE matching the screenshot layout ────────────────────────────────
-function renderCmpTable(nodes, has_actuals){
-  const MAX_BAR = 90;  // px max bar width
-  const errColorSimple = (e) => (e !== null && Math.abs(e) > 12) ? '#ef4444' : '#22c55e';
+    // ── CMP TABLE matching the screenshot layout ────────────────────────────────
+    function renderCmpTable(nodes, has_actuals) {
+      const MAX_BAR = 90;  // px max bar width
+      const errColorSimple = (e) => (e !== null && Math.abs(e) > 12) ? '#ef4444' : '#22c55e';
 
-  const rows = nodes.map(n=>{
-    const arrCol  = delayColor(n.arr_delay);
-    const depCol  = delayColor(n.dep_delay);
-    const arrW    = Math.round(Math.min(MAX_BAR, n.arr_delay / MAX_DELAY * MAX_BAR));
-    const depW    = Math.round(Math.min(MAX_BAR, n.dep_delay / MAX_DELAY * MAX_BAR));
+      const rows = nodes.map(n => {
+        const arrCol = delayColor(n.arr_delay);
+        const depCol = delayColor(n.dep_delay);
+        const arrW = Math.round(Math.min(MAX_BAR, n.arr_delay / MAX_DELAY * MAX_BAR));
+        const depW = Math.round(Math.min(MAX_BAR, n.dep_delay / MAX_DELAY * MAX_BAR));
 
-    const hasAct  = has_actuals && n.act_arr !== null;
-    const actArrCol = hasAct ? delayColor(n.act_arr) : '#555';
-    const actDepCol = hasAct ? delayColor(n.act_dep) : '#555';
-    const actArrW   = hasAct ? Math.round(Math.min(MAX_BAR, n.act_arr / MAX_DELAY * MAX_BAR)) : 0;
-    const actDepW   = hasAct ? Math.round(Math.min(MAX_BAR, n.act_dep / MAX_DELAY * MAX_BAR)) : 0;
+        const hasAct = has_actuals && n.act_arr !== null;
+        const actArrCol = hasAct ? delayColor(n.act_arr) : '#555';
+        const actDepCol = hasAct ? delayColor(n.act_dep) : '#555';
+        const actArrW = hasAct ? Math.round(Math.min(MAX_BAR, n.act_arr / MAX_DELAY * MAX_BAR)) : 0;
+        const actDepW = hasAct ? Math.round(Math.min(MAX_BAR, n.act_dep / MAX_DELAY * MAX_BAR)) : 0;
 
-    // error display: show both ARR and DEP, sign only, green until >10 min
-    const errTxt = hasAct
-      ? `<div class="err-stack">
+        // error display: show both ARR and DEP, sign only, green until >10 min
+        const errTxt = hasAct
+          ? `<div class="err-stack">
            <div class="err-line"><span class="err-tag">ARR</span><span class="err-signed" style="color:${errColorSimple(n.err_arr)}">${n.err_arr >= 0 ? '+' : '-'}${Math.abs(n.err_arr).toFixed(1)}m</span></div>
            <div class="err-line"><span class="err-tag">DEP</span><span class="err-signed" style="color:${errColorSimple(n.err_dep)}">${n.err_dep >= 0 ? '+' : '-'}${Math.abs(n.err_dep).toFixed(1)}m</span></div>
          </div>`
-      : `<span style="color:var(--dim)">—</span>`;
+          : `<span style="color:var(--dim)">—</span>`;
 
-    // classification
-    const predCls = n.p_delay > 0.5;
-    const predClsTxt = `<span class="cls-val" style="color:${predCls?'#f97316':'#22c55e'}">${predCls?'DELA':'CLEA'}</span>`;
-    const actClsTxt  = hasAct && n.act_cls !== null
-      ? `<span class="cls-val" style="color:${n.act_cls?'#22c55e':'#22c55e'}">${n.act_cls?'DELA':'CLEA'}</span>`
-      : '';
-    const clsMiss = hasAct && n.act_cls !== null && (predCls !== Boolean(n.act_cls));
+        // classification
+        const predCls = n.p_delay > 0.5;
+        const predClsTxt = `<span class="cls-val" style="color:${predCls ? '#f97316' : '#22c55e'}">${predCls ? 'DELA' : 'CLEA'}</span>`;
+        const actClsTxt = hasAct && n.act_cls !== null
+          ? `<span class="cls-val" style="color:${n.act_cls ? '#22c55e' : '#22c55e'}">${n.act_cls ? 'DELA' : 'CLEA'}</span>`
+          : '';
+        const clsMiss = hasAct && n.act_cls !== null && (predCls !== Boolean(n.act_cls));
 
-    const apColor = LEVEL_COLOR[n.level]||'#888';
+        const apColor = LEVEL_COLOR[n.level] || '#888';
 
-    return `
+        return `
     <tr class="ap-group-start">
       <td class="td-airport" rowspan="2" style="color:${apColor};cursor:pointer" onclick="highlightAp('${n.code}')">
         ${n.code}<br><span style="font-size:8px;color:var(--dim);font-family:var(--mono);font-weight:400">${n.name.split(' ')[0]}</span>
@@ -492,7 +997,7 @@ function renderCmpTable(nodes, has_actuals){
         </div>
       </td>
       <td style="color:var(--dim)">—</td>
-      <td>${predClsTxt}${clsMiss?'<div class="cls-miss">miss</div>':''}</td>
+      <td>${predClsTxt}${clsMiss ? '<div class="cls-miss">miss</div>' : ''}</td>
     </tr>
     <tr class="ap-group-end">
       <td class="td-row-label" style="color:#22c55eaa">ACT</td>
@@ -511,134 +1016,134 @@ function renderCmpTable(nodes, has_actuals){
       <td>${errTxt}</td>
       <td>${actClsTxt}</td>
     </tr>`;
-  }).join('');
+      }).join('');
 
-  document.getElementById('cmp-tbody').innerHTML = rows;
-}
-
-// ── map ────────────────────────────────────────────────────────────────────
-let highlightCode=null;
-function highlightAp(code){
-  highlightCode=code;
-  renderMap(currentData.nodes,currentData.has_actuals);
-  // scroll card or table row
-  if(dashMode==='pred'){
-    const cards=document.querySelectorAll('.ap-card');
-    const idx=currentData.nodes.findIndex(n=>n.code===code);
-    if(idx>=0) cards[idx]?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  } else {
-    const cells=document.querySelectorAll('.td-airport');
-    cells.forEach(c=>{ if(c.textContent.trim().startsWith(code)) c.closest('tr')?.scrollIntoView({behavior:'smooth',block:'nearest'}); });
-  }
-}
-
-function renderMap(nodes,has_actuals){
-  const wrap=document.getElementById('map-wrap');
-  const tip =document.getElementById('apTip');
-  wrap.querySelectorAll('svg').forEach(s=>s.remove());
-
-  const W=wrap.offsetWidth, H=wrap.offsetHeight||600;
-  const svg=d3.select(wrap).append('svg')
-    .attr('width',W).attr('height',H)
-    .style('position','absolute').style('top',0).style('left',0);
-
-  svg.append('rect').attr('width',W).attr('height',H).attr('fill','#060810');
-
-  const proj=d3.geoMercator().center([105,34]).scale(W*0.88).translate([W/2,H/2]);
-  const path=d3.geoPath(proj);
-
-  if(topoData){
-    svg.selectAll('path.country')
-      .data(topojson.feature(topoData,topoData.objects.countries).features)
-      .join('path').attr('class','country').attr('d',path)
-      .attr('fill',d=>d.id==='156'?'#1f2937':'#090c12')
-      .attr('stroke',d=>d.id==='156'?'#38bdf8':'#12161e')
-      .attr('stroke-width',d=>d.id==='156'?1.5:0.4);
-  }
-
-  const defs=svg.append('defs');
-  ['clear','low','mod','high','severe'].forEach(lvl=>{
-    const col=LEVEL_COLOR[lvl.toUpperCase()];
-    const f=defs.append('filter').attr('id','glow-'+lvl)
-      .attr('x','-100%').attr('y','-100%').attr('width','300%').attr('height','300%');
-    f.append('feGaussianBlur').attr('stdDeviation','4').attr('result','blur');
-    const mg=f.append('feMerge');
-    mg.append('feMergeNode').attr('in','blur');
-    mg.append('feMergeNode').attr('in','SourceGraphic');
-  });
-
-  const rScale   =d3.scaleSqrt().domain([0,MAX_DELAY]).range([4,22]);
-  const opacScale=d3.scaleLinear().domain([0,1]).range([0.4,1]);
-  const cmp      =dashMode==='cmp'&&has_actuals;
-
-  nodes.forEach(n=>{
-    const p=proj([n.lon,n.lat]);
-    if(!p) return;
-
-    const color  =LEVEL_COLOR[n.level]||'#888';
-    const r      =rScale(n.avg_delay);
-    const isHL   =highlightCode===n.code;
-    const glow   =n.level==='HIGH'||n.level==='SEVERE';
-    const arrCol =delayColor(n.arr_delay);
-    const depCol =delayColor(n.dep_delay);
-
-    const g=svg.append('g').attr('class','ap-node').style('cursor','pointer');
-
-    // ── pulse ring: HIGH/SEVERE in pred mode; also fires in cmp mode ──
-    if(n.level==='SEVERE'||n.level==='HIGH'){
-      g.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',r)
-        .attr('fill','none').attr('stroke',color).attr('stroke-width',1.5).attr('opacity',0)
-        .classed('pulse-circle',true)
-        .append('animate').attr('attributeName','r').attr('from',r).attr('to',r*2.5)
-        .attr('dur',n.level==='SEVERE'?'1.2s':'1.8s').attr('repeatCount','indefinite');
-      g.select('.pulse-circle').append('animate')
-        .attr('attributeName','opacity').attr('from','0.7').attr('to','0')
-        .attr('dur',n.level==='SEVERE'?'1.2s':'1.8s').attr('repeatCount','indefinite');
+      document.getElementById('cmp-tbody').innerHTML = rows;
     }
 
-    // ── in CMP mode: extra alert ring when avg_delay>15 AND |err_arr|>8 ──
-    if(cmp && n.avg_delay>15 && n.err_arr!==null && Math.abs(n.err_arr)>8){
-      const alertCol=n.err_arr>0?'#ef4444':'#60a5fa';
-      g.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',r+5)
-        .attr('fill','none').attr('stroke',alertCol)
-        .attr('stroke-width',2).attr('stroke-dasharray','4 3')
-        .attr('opacity',0.85);
+    // ── map ────────────────────────────────────────────────────────────────────
+    let highlightCode = null;
+    function highlightAp(code) {
+      highlightCode = code;
+      renderMap(currentData.nodes, currentData.has_actuals);
+      // scroll card or table row
+      if (dashMode === 'pred') {
+        const cards = document.querySelectorAll('.ap-card');
+        const idx = currentData.nodes.findIndex(n => n.code === code);
+        if (idx >= 0) cards[idx]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        const cells = document.querySelectorAll('.td-airport');
+        cells.forEach(c => { if (c.textContent.trim().startsWith(code)) c.closest('tr')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
+      }
     }
 
-    // highlight halo
-    if(isHL){
-      g.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',r+6)
-        .attr('fill','none').attr('stroke','#fff').attr('stroke-width',1.5).attr('opacity',0.6);
-    }
+    function renderMap(nodes, has_actuals) {
+      const wrap = document.getElementById('map-wrap');
+      const tip = document.getElementById('apTip');
+      wrap.querySelectorAll('svg').forEach(s => s.remove());
 
-    // ── MAIN BUBBLE: same in both modes ──
-    // inner fill = dep delay colour, outer stroke ring = arr delay colour
-    g.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',r)
-      .attr('fill',depCol)
-      .attr('fill-opacity',opacScale(n.p_delay)*0.85)
-      .attr('stroke',arrCol)
-      .attr('stroke-width',2)
-      .attr('filter',glow?`url(#glow-${n.level.toLowerCase()})`:null);
+      const W = wrap.offsetWidth, H = wrap.offsetHeight || 600;
+      const svg = d3.select(wrap).append('svg')
+        .attr('width', W).attr('height', H)
+        .style('position', 'absolute').style('top', 0).style('left', 0);
 
-    // code label
-    g.append('text').attr('x',p[0]).attr('y',p[1]-r-4)
-      .attr('text-anchor','middle').attr('fill',isHL?'#fff':'#8899aa')
-      .attr('font-size',isHL?10:8).attr('font-family','Space Mono,monospace')
-      .text(n.code);
+      svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#060810');
 
-    // ── tooltip ──
-    g.on('mousemove',(ev)=>{
-      tip.style.display='block';
-      tip.style.left=(ev.offsetX+16)+'px';
-      tip.style.top=Math.max(0,ev.offsetY-10)+'px';
-      const arrPct=Math.min(100,n.arr_delay/MAX_DELAY*100).toFixed(0);
-      const depPct=Math.min(100,n.dep_delay/MAX_DELAY*100).toFixed(0);
+      const proj = d3.geoMercator().center([105, 34]).scale(W * 0.88).translate([W / 2, H / 2]);
+      const path = d3.geoPath(proj);
 
-      if(cmp && n.act_arr!=null){
-        const aAP=Math.min(100,n.act_arr/MAX_DELAY*100).toFixed(0);
-        const aDPp=Math.min(100,n.act_dep/MAX_DELAY*100).toFixed(0);
-        const clsMiss=n.act_cls!==null&&((n.p_delay>0.5)!==Boolean(n.act_cls));
-        tip.innerHTML=`
+      if (topoData) {
+        svg.selectAll('path.country')
+          .data(topojson.feature(topoData, topoData.objects.countries).features)
+          .join('path').attr('class', 'country').attr('d', path)
+          .attr('fill', d => d.id === '156' ? '#1f2937' : '#090c12')
+          .attr('stroke', d => d.id === '156' ? '#38bdf8' : '#12161e')
+          .attr('stroke-width', d => d.id === '156' ? 1.5 : 0.4);
+      }
+
+      const defs = svg.append('defs');
+      ['clear', 'low', 'mod', 'high', 'severe'].forEach(lvl => {
+        const col = LEVEL_COLOR[lvl.toUpperCase()];
+        const f = defs.append('filter').attr('id', 'glow-' + lvl)
+          .attr('x', '-100%').attr('y', '-100%').attr('width', '300%').attr('height', '300%');
+        f.append('feGaussianBlur').attr('stdDeviation', '4').attr('result', 'blur');
+        const mg = f.append('feMerge');
+        mg.append('feMergeNode').attr('in', 'blur');
+        mg.append('feMergeNode').attr('in', 'SourceGraphic');
+      });
+
+      const rScale = d3.scaleSqrt().domain([0, MAX_DELAY]).range([4, 22]);
+      const opacScale = d3.scaleLinear().domain([0, 1]).range([0.4, 1]);
+      const cmp = dashMode === 'cmp' && has_actuals;
+
+      nodes.forEach(n => {
+        const p = proj([n.lon, n.lat]);
+        if (!p) return;
+
+        const color = LEVEL_COLOR[n.level] || '#888';
+        const r = rScale(n.avg_delay);
+        const isHL = highlightCode === n.code;
+        const glow = n.level === 'HIGH' || n.level === 'SEVERE';
+        const arrCol = delayColor(n.arr_delay);
+        const depCol = delayColor(n.dep_delay);
+
+        const g = svg.append('g').attr('class', 'ap-node').style('cursor', 'pointer');
+
+        // ── pulse ring: HIGH/SEVERE in pred mode; also fires in cmp mode ──
+        if (n.level === 'SEVERE' || n.level === 'HIGH') {
+          g.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', r)
+            .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1.5).attr('opacity', 0)
+            .classed('pulse-circle', true)
+            .append('animate').attr('attributeName', 'r').attr('from', r).attr('to', r * 2.5)
+            .attr('dur', n.level === 'SEVERE' ? '1.2s' : '1.8s').attr('repeatCount', 'indefinite');
+          g.select('.pulse-circle').append('animate')
+            .attr('attributeName', 'opacity').attr('from', '0.7').attr('to', '0')
+            .attr('dur', n.level === 'SEVERE' ? '1.2s' : '1.8s').attr('repeatCount', 'indefinite');
+        }
+
+        // ── in CMP mode: extra alert ring when avg_delay>15 AND |err_arr|>8 ──
+        if (cmp && n.avg_delay > 15 && n.err_arr !== null && Math.abs(n.err_arr) > 8) {
+          const alertCol = n.err_arr > 0 ? '#ef4444' : '#60a5fa';
+          g.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', r + 5)
+            .attr('fill', 'none').attr('stroke', alertCol)
+            .attr('stroke-width', 2).attr('stroke-dasharray', '4 3')
+            .attr('opacity', 0.85);
+        }
+
+        // highlight halo
+        if (isHL) {
+          g.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', r + 6)
+            .attr('fill', 'none').attr('stroke', '#fff').attr('stroke-width', 1.5).attr('opacity', 0.6);
+        }
+
+        // ── MAIN BUBBLE: same in both modes ──
+        // inner fill = dep delay colour, outer stroke ring = arr delay colour
+        g.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', r)
+          .attr('fill', depCol)
+          .attr('fill-opacity', opacScale(n.p_delay) * 0.85)
+          .attr('stroke', arrCol)
+          .attr('stroke-width', 2)
+          .attr('filter', glow ? `url(#glow-${n.level.toLowerCase()})` : null);
+
+        // code label
+        g.append('text').attr('x', p[0]).attr('y', p[1] - r - 4)
+          .attr('text-anchor', 'middle').attr('fill', isHL ? '#fff' : '#8899aa')
+          .attr('font-size', isHL ? 10 : 8).attr('font-family', 'Space Mono,monospace')
+          .text(n.code);
+
+        // ── tooltip ──
+        g.on('mousemove', (ev) => {
+          tip.style.display = 'block';
+          tip.style.left = (ev.offsetX + 16) + 'px';
+          tip.style.top = Math.max(0, ev.offsetY - 10) + 'px';
+          const arrPct = Math.min(100, n.arr_delay / MAX_DELAY * 100).toFixed(0);
+          const depPct = Math.min(100, n.dep_delay / MAX_DELAY * 100).toFixed(0);
+
+          if (cmp && n.act_arr != null) {
+            const aAP = Math.min(100, n.act_arr / MAX_DELAY * 100).toFixed(0);
+            const aDPp = Math.min(100, n.act_dep / MAX_DELAY * 100).toFixed(0);
+            const clsMiss = n.act_cls !== null && ((n.p_delay > 0.5) !== Boolean(n.act_cls));
+            tip.innerHTML = `
           <div class="tip-code" style="color:${color}">${n.code}</div>
           <div class="tip-name">${n.name}</div>
           <div class="tip-div"></div>
@@ -654,24 +1159,25 @@ function renderMap(nodes,has_actuals){
           <div class="tip-row"><span>Departure</span><span style="color:${delayColor(n.act_dep)};font-weight:700">+${n.act_dep.toFixed(1)} min</span></div>
           <div class="tip-bar-wrap"><div class="tip-bar" style="width:${aDPp}%;background:#22c55e"></div></div>
           <div class="tip-div"></div>
-          <div class="tip-row"><span>Arr error</span><span style="color:${errColor(n.err_arr)};font-weight:700">${n.err_arr>0?'+':''}${n.err_arr.toFixed(1)} min</span></div>
-          <div class="tip-row"><span>Dep error</span><span style="color:${errColor(n.err_dep)};font-weight:700">${n.err_dep>0?'+':''}${n.err_dep.toFixed(1)} min</span></div>
-          ${clsMiss?'<div style="color:#ef4444;font-size:10px;margin-top:4px">Classification miss ✗</div>':''}
-          <div class="tip-row" style="margin-top:6px"><span style="color:#6e7681">P(delay)</span><span style="color:var(--accent)">${(n.p_delay*100).toFixed(1)}%</span></div>`;
-      } else {
-        tip.innerHTML=`
+          <div class="tip-row"><span>Arr error</span><span style="color:${errColor(n.err_arr)};font-weight:700">${n.err_arr > 0 ? '+' : ''}${n.err_arr.toFixed(1)} min</span></div>
+          <div class="tip-row"><span>Dep error</span><span style="color:${errColor(n.err_dep)};font-weight:700">${n.err_dep > 0 ? '+' : ''}${n.err_dep.toFixed(1)} min</span></div>
+          ${clsMiss ? '<div style="color:#ef4444;font-size:10px;margin-top:4px">Classification miss ✗</div>' : ''}
+          <div class="tip-row" style="margin-top:6px"><span style="color:#6e7681">P(delay)</span><span style="color:var(--accent)">${(n.p_delay * 100).toFixed(1)}%</span></div>`;
+          } else {
+            tip.innerHTML = `
           <div class="tip-code" style="color:${color}">${n.code}</div>
           <div class="tip-name">${n.name}</div>
           <div class="tip-row"><span>Arrival</span><span style="color:${arrCol};font-weight:700">+${n.arr_delay.toFixed(1)} min</span></div>
           <div class="tip-bar-wrap"><div class="tip-bar" style="width:${arrPct}%;background:${arrCol}"></div></div>
           <div class="tip-row" style="margin-top:4px"><span>Departure</span><span style="color:${depCol};font-weight:700">+${n.dep_delay.toFixed(1)} min</span></div>
           <div class="tip-bar-wrap"><div class="tip-bar" style="width:${depPct}%;background:${depCol}"></div></div>
-          <div class="tip-row" style="margin-top:6px"><span style="color:#6e7681">P(delay)</span><span style="color:var(--accent)">${(n.p_delay*100).toFixed(1)}%</span></div>`;
-      }
-    }).on('mouseleave',()=>{tip.style.display='none';})
-      .on('click',()=>{highlightAp(n.code);});
-  });
-}
-</script>
+          <div class="tip-row" style="margin-top:6px"><span style="color:#6e7681">P(delay)</span><span style="color:var(--accent)">${(n.p_delay * 100).toFixed(1)}%</span></div>`;
+          }
+        }).on('mouseleave', () => { tip.style.display = 'none'; })
+          .on('click', () => { highlightAp(n.code); });
+      });
+    }
+  </script>
 </body>
+
 </html>
